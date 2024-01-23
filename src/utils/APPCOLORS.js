@@ -1,0 +1,9 @@
+export default APPCOLORS = {
+    BLACK : '#000000',
+    WHITE : '#FFFFFF',
+    BTN_COLOR: '#007CC3',
+    SKY_BLUE  : '#9BC8E2',
+    CLOSETOWHITE : '#F1FFFA',
+    TEXTFIELDCOLOR : '#EBEBEB'
+
+}
