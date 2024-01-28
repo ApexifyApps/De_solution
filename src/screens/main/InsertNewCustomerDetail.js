@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, Image, TextInput, FlatList } from 'react-native'
+import { View, Text, TouchableOpacity, Image, TextInput, FlatList, ActivityIndicator } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import APPCOLORS from '../../utils/APPCOLORS'
 import Ionicons from 'react-native-vector-icons/Ionicons'
@@ -7,17 +7,48 @@ import AntDesign from 'react-native-vector-icons/AntDesign'
 import Octicons from 'react-native-vector-icons/Octicons'
 import EvilIcons from 'react-native-vector-icons/EvilIcons'
 import axios from 'axios'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
+import { setLoader } from '../../redux/AuthSlice'
+import Toast from 'react-native-toast-message'
 const InsertNewCustomerDetail = ({ navigation }) => {
 
     const userData = useSelector(state => state.Data.currentData)
+
+    const isLoader = useSelector(state => state.Data.Loading)
 
     const [CustomerName, setCustomerName] = useState("")
     const [PhoneNumber, setPhoneNumber] = useState("")
     const [Address, setAddress] = useState("")
 
+    const dispatch = useDispatch()
+
     const AddNewCustomer = () => {
 
+        dispatch(setLoader(true))
+        if(!CustomerName){
+            dispatch(setLoader(false))
+            Toast.show({
+                type: 'error',
+                text1: 'Customer Name is required'
+            })
+
+        }else if(!PhoneNumber){
+            dispatch(setLoader(false))
+            Toast.show({
+                type: 'error',
+                text1: 'Phone Number Name is required'
+            })
+
+        }else if(!Address){
+            dispatch(setLoader(false))
+
+            Toast.show({
+                type: 'error',
+                text1: 'Address is required'
+            })
+        }else{
+
+        
         let data = new FormData();
         data.append('CustName', CustomerName);
         data.append('cust_ref', PhoneNumber);
@@ -37,10 +68,20 @@ const InsertNewCustomerDetail = ({ navigation }) => {
         axios.request(config)
             .then((response) => {
                 console.log(JSON.stringify(response.data));
+                Toast.show({
+                    type: 'success',
+                    text1: 'Successfully created new customer'
+                })
+                setCustomerName("")
+                setPhoneNumber("")
+                setAddress("")
+                dispatch(setLoader(false))
             })
             .catch((error) => {
                 console.log(error);
+                dispatch(setLoader(false))
             });
+        }
 
     }
 
@@ -96,7 +137,12 @@ const InsertNewCustomerDetail = ({ navigation }) => {
 
 
                 <TouchableOpacity onPress={() => AddNewCustomer()} style={{ height: 60, backgroundColor: APPCOLORS.BTN_COLOR, marginTop: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
+                    {
+                        isLoader == true ?
+                        <ActivityIndicator size={'large'} color={'white'}/>
+                        :
                     <Text style={{ color: APPCOLORS.WHITE, fontSize: 20, fontWeight: 'bold' }}>Submit</Text>
+                    }
                 </TouchableOpacity>
 
             </View>

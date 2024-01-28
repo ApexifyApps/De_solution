@@ -51,7 +51,10 @@ export const AuthSlice = createSlice({
         currentData: [],
         cartData: [],
         token: "",
-        Loading: false
+        GrandCartTotalPrice: "0",
+        Loading: false,
+        AllProduct: [],
+
     },
     reducers: {
         setLoader: (state, action) => {
@@ -66,6 +69,12 @@ export const AuthSlice = createSlice({
         },
         setCartData: (state, action) => {
             state.cartData = action.payload
+        },
+        setGrandCartTotalPrice: (state, action) => {
+            state.GrandCartTotalPrice = action.payload
+        },
+        setAllProducts: (state, action) => {
+            state.AllProduct = action.payload
         },
 
         setLogout: (state) => {
@@ -99,7 +108,7 @@ export const AuthSlice = createSlice({
 })
 
 // Action creators are generated for each case reducer function
-export const { setMyData, setToken, setLogout, setLoader, setCartData } = AuthSlice.actions
+export const { setMyData, setToken, setLogout, setLoader, setCartData, setGrandCartTotalPrice ,  setAllProducts} = AuthSlice.actions
 
 export default AuthSlice.reducer
 

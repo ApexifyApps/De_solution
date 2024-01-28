@@ -1,9 +1,50 @@
 import { View, Text, TouchableOpacity, Image } from 'react-native'
-import React from 'react'
+import React, { useEffect } from 'react'
 import APPCOLORS from '../../utils/APPCOLORS'
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons'
 import LinearGradient from 'react-native-linear-gradient'
+import { useDispatch } from 'react-redux'
+import { setAllProducts, setLoader } from '../../redux/AuthSlice'
+import axios from 'axios'
 const Home = ({navigation}) => {
+
+
+    useEffect(()=>{
+        getProducts()
+    },[])
+
+
+    const dispatch = useDispatch()
+    const getProducts = () => {
+
+        dispatch(setLoader(true))
+
+        let data = new FormData()
+
+        let config = {
+            method: 'get',
+            maxBodyLength: Infinity,
+            url: 'https://e.de2solutions.com/mobile/stock_master.php',
+            headers: {},
+            data: data
+        };
+
+        axios.request(config)
+            .then((response) => {
+                console.log(JSON.stringify(response.data.data));
+                dispatch(setLoader(false))
+                dispatch(setAllProducts(response.data.data))
+
+             
+            })
+            .catch((error) => {
+                dispatch(setLoader(false))
+                console.log(error);
+
+            });
+    }
+
+
     return (
         <View style={{ flex: 1, backgroundColor: '#C0DAEA' }}>
             

@@ -9,22 +9,19 @@ import Modal from "react-native-modal";
 import Toast from 'react-native-toast-message'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch, useSelector } from 'react-redux'
-import { setCartData, setLoader } from '../../redux/AuthSlice'
-
-
+import { setCartData, setLoader, setGrandCartTotalPrice } from '../../redux/AuthSlice'
 
 const AddItems = ({ navigation, route }) => {
 
     const { data } = route.params
 
-
     const isLoader = useSelector(state => state.Data.Loading)
     const cart = useSelector(state => state.Data.cartData)
+    const CurrentUser = useSelector(state => state.Data.currentData)
+    const GrandCartTotalPrice = useSelector(state => state.Data.GrandCartTotalPrice)
+    const AllProducts = useSelector(state => state.Data.AllProduct)
 
-    console.log("first", isLoader)
-
-
-    // console.log("myData", data.debtor_no)
+    // console.log("GrandCartTotalPrice", GrandCartTotalPrice)
 
     const [allProducts, setProducts] = useState()
 
@@ -33,70 +30,30 @@ const AddItems = ({ navigation, route }) => {
     const [Search, setSearch] = useState("")
 
     const [selectProduct, setSelectProduct] = useState()
+
     const [total, setTotal] = useState(1)
+
     const [itemCode, setItemCode] = useState()
 
     const [ProductPrice, setProductPrice] = useState("0")
+
     const [ProductDiscount, setProductDiscount] = useState("0")
 
-    // const [cart, setCart] = useState([])
-
-
-
-
-
-    useEffect(() => {
-        const unsubscribe = navigation.addListener('focus', () => {
-            getProducts()
-
-        });
-        // Return the function to unsubscribe from the event so it gets removed on unmount
-        return unsubscribe;
-    }, [navigation])
 
     const dispatch = useDispatch()
-    const getProducts = () => {
-
-        dispatch(setLoader(true))
-
-        let data = new FormData()
-
-        let config = {
-            method: 'get',
-            maxBodyLength: Infinity,
-            url: 'https://e.de2solutions.com/mobile/stock_master.php',
-            headers: {},
-            data: data
-        };
-
-        axios.request(config)
-            .then((response) => {
-                // console.log(JSON.stringify(response.data.data));
-                dispatch(setLoader(false))
-                setProducts(response.data.data)
-
-            })
-            .catch((error) => {
-                dispatch(setLoader(false))
-                console.log(error);
-
-            });
-    }
-
 
     const subtraction = (mode) => {
+
         if (mode == "plus") {
 
             setTotal(total + 1)
-
 
         } else {
             if (total == 1) {
 
             } else {
+
                 setTotal(total - 1)
-
-
 
             }
         }
@@ -104,44 +61,52 @@ const AddItems = ({ navigation, route }) => {
 
     const AddItems = async () => {
 
+        dispatch(setLoader(true))
+
         if (cart?.length > 0) {
 
-
-
-            let data = new FormData();
-            data.append('CustName', '');
-            data.append('trans_type', '03215');
-            data.append('person_id', 'karachi abcdd');
-            data.append('ord_date', Date.now());
-            data.append('payments', '');
-            data.append('location', '');
-            data.append('dimension', '');
-            data.append('price_list', '');
-            data.append('comments', '');
-            data.append('tax_included', '');
-            data.append('salesman', '');
-            data.append('total', '');
-            data.append('total_disc', '');
-            data.append('ship_via', '');
-            data.append('freight_cost', '');
-            data.append('purch_order_details', '');
+            let datas = new FormData();
+            datas.append('CustName', data?.name);
+            datas.append('trans_type', "30");
+            datas.append('person_id', data?.debtor_no);
+            datas.append('ord_date', Date.now());
+            datas.append('payments', '1');
+            datas.append('location', 'DEF');
+            datas.append('dimension', '0');
+            datas.append('price_list', '');
+            datas.append('comments', '');
+            datas.append('tax_included', '');
+            datas.append('salesman', CurrentUser?.id);
+            datas.append('total', GrandCartTotalPrice);
+            datas.append('total_disc', '');
+            datas.append('ship_via', '');
+            datas.append('freight_cost', '');
+            datas.append('purch_order_details', JSON.stringify(cart));
 
             let config = {
                 method: 'post',
                 maxBodyLength: Infinity,
                 url: 'https://e.de2solutions.com/mobile/post_service_purch_sale.php',
                 headers: {
-                    ...data.getHeaders()
+                    'Content-Type': 'multipart/form-data'
                 },
-                data: data
+                data: datas
             };
 
             axios.request(config)
                 .then((response) => {
                     console.log(JSON.stringify(response.data));
+                    dispatch(setLoader(false))
+                    dispatch(setCartData([]))
+                    Toast.show({
+                        type: 'success',
+                        text1: "Successfully created"
+                    })
+
                 })
                 .catch((error) => {
                     console.log(error);
+                    dispatch(setLoader(false))
                 });
 
         } else {
@@ -149,6 +114,7 @@ const AddItems = ({ navigation, route }) => {
                 type: 'error',
                 text1: "Nothing in the cart"
             })
+            dispatch(setLoader(false))
         }
 
     }
@@ -179,12 +145,14 @@ const AddItems = ({ navigation, route }) => {
 
             console.log("is exist?", isExist);
 
+
             if (isExist == true) {
                 Toast.show({
                     type: 'error',
                     text1: 'Item already exists in the cart'
                 });
             } else {
+                dispatch(setGrandCartTotalPrice(GrandCartTotalPrice + ProductPrice * total - ProductDiscount))
 
                 const newItem = {
                     description: selectProduct,
@@ -221,7 +189,7 @@ const AddItems = ({ navigation, route }) => {
         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
             <View style={{ flex: 1, backgroundColor: APPCOLORS.BTN_COLOR }}>
                 <View style={{ flexDirection: 'row', padding: 20, alignItems: 'center', justifyContent: 'space-between' }}>
-                    <TouchableOpacity onPress={() => { dispatch(setCartData([])), navigation.goBack() }} >
+                    <TouchableOpacity onPress={() => { dispatch(setCartData([])), navigation.goBack(), dispatch(setGrandCartTotalPrice("0")) }} >
                         <Ionicons
                             name={'chevron-back'}
                             color={APPCOLORS.WHITE}
@@ -245,9 +213,8 @@ const AddItems = ({ navigation, route }) => {
 
                 <View style={{ flex: 1, backgroundColor: "#9BC8E2", borderTopRightRadius: 20, borderTopLeftRadius: 20, padding: 20 }}>
 
-                    <TouchableOpacity onPress={() => { getProducts(), setProductModal(true) }} style={{ height: 50, flexDirection: 'row', backgroundColor: APPCOLORS.WHITE, alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, borderRadius: 10 }}>
+                    <TouchableOpacity onPress={() => { setProductModal(true) }} style={{ height: 50, flexDirection: 'row', backgroundColor: APPCOLORS.WHITE, alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, borderRadius: 10 }}>
                         <Text style={{ color: APPCOLORS.BLACK }}>Select Product</Text>
-
                         <Text>{selectProduct}</Text>
                     </TouchableOpacity>
 
@@ -325,8 +292,14 @@ const AddItems = ({ navigation, route }) => {
 
 
 
-                    <TouchableOpacity onPress={()=> AddItems()} style={{ height: 50, backgroundColor: APPCOLORS.CLOSETOWHITE, marginTop: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={{ color: APPCOLORS.BLACK, fontSize: 17 }}>Confirm order</Text>
+                    <TouchableOpacity onPress={() => AddItems()} style={{ height: 50, backgroundColor: APPCOLORS.CLOSETOWHITE, marginTop: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
+                        {
+                            isLoader ?
+                                <ActivityIndicator size={'large'} color={'black'} />
+                                :
+
+                                <Text style={{ color: APPCOLORS.BLACK, fontSize: 17 }}>Confirm order</Text>
+                        }
                     </TouchableOpacity>
                 </View>
 
@@ -337,67 +310,59 @@ const AddItems = ({ navigation, route }) => {
             <Modal isVisible={ProductModal}>
                 <View style={{ flex: 1, backgroundColor: 'white', borderRadius: 20, padding: 20 }}>
                     {
-                        isLoader == true ?
 
-                            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                                <Text style={{ color: 'black' }}>Loading Products</Text>
-                                <ActivityIndicator size={'large'} color={'black'} />
+                        <View style={{ flex: 1 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', }}>
+                                <Text style={{ color: 'black', fontSize: 20 }}>Select product</Text>
+
+                                {
+                                    selectProduct ?
+
+                                        <TouchableOpacity onPress={() => setProductModal(false)} style={{ paddingHorizontal: 15, backgroundColor: APPCOLORS.BTN_COLOR, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
+                                            <Text style={{ fontSize: 14, color: 'white' }}>Done</Text>
+                                        </TouchableOpacity>
+
+                                        :
+                                        null
+                                }
                             </View>
 
-                            :
+                            <TextInput
+                                placeholder='search'
+                                style={{ borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, marginTop: 10 }}
+                                onChangeText={(txt) => {
+                                    setSearch(txt)
+                                }}
+                                value={Search}
+                            />
 
-                            <View style={{ flex: 1 }}>
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', }}>
-                                    <Text style={{ color: 'black', fontSize: 20 }}>Select product</Text>
 
-                                    {
-                                        selectProduct ?
+                            <ScrollView>
+                                {
+                                    AllProducts?.filter((val) => {
 
-                                            <TouchableOpacity onPress={() => setProductModal(false)} style={{ paddingHorizontal: 15, backgroundColor: APPCOLORS.BTN_COLOR, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
-                                                <Text style={{ fontSize: 14, color: 'white' }}>Done</Text>
+                                        const itemNameLowerCase = val.description.toLowerCase();
+
+                                        if (Search == "") {
+                                            return val
+                                        } else if (itemNameLowerCase?.includes(Search.toLowerCase())) {
+                                            return val
+                                        }
+                                    }).map((item) => {
+                                        // console.log("...........", item)
+                                        // setProductPrice(item.material_cost)
+                                        return (
+                                            <TouchableOpacity onPress={() => { setItemCode(item?.stock_id), setSelectProduct(item?.description) }} style={{ padding: 10, borderWidth: 1, marginTop: 10, borderRadius: 10, backgroundColor: item.description == selectProduct ? APPCOLORS.BTN_COLOR : null }}>
+                                                <Text style={{ color: item.description == selectProduct ? 'white' : 'black' }}>{item.description}</Text>
+
+                                                <Text style={{ color: item.description == selectProduct ? 'white' : 'black' }}>Stock ID : {item.stock_id}</Text>
                                             </TouchableOpacity>
+                                        )
+                                    })
+                                }
+                            </ScrollView>
 
-                                            :
-                                            null
-                                    }
-                                </View>
-
-                                <TextInput
-                                    placeholder='search'
-                                    style={{ borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, marginTop: 10 }}
-                                    onChangeText={(txt) => {
-                                        setSearch(txt)
-                                    }}
-                                    value={Search}
-                                />
-
-
-                                <ScrollView>
-                                    {
-                                        allProducts?.filter((val) => {
-
-                                            const itemNameLowerCase = val.description.toLowerCase();
-
-                                            if (Search == "") {
-                                                return val
-                                            } else if (itemNameLowerCase?.includes(Search.toLowerCase())) {
-                                                return val
-                                            }
-                                        }).map((item) => {
-                                            // console.log("...........", item)
-                                            // setProductPrice(item.material_cost)
-                                            return (
-                                                <TouchableOpacity onPress={() => { setItemCode(item?.stock_id), setSelectProduct(item?.description) }} style={{ padding: 10, borderWidth: 1, marginTop: 10, borderRadius: 10, backgroundColor: item.description == selectProduct ? APPCOLORS.BTN_COLOR : null }}>
-                                                    <Text style={{ color: item.description == selectProduct ? 'white' : 'black' }}>{item.description}</Text>
-
-                                                    <Text style={{ color: item.description == selectProduct ? 'white' : 'black' }}>Stock ID : {item.stock_id}</Text>
-                                                </TouchableOpacity>
-                                            )
-                                        })
-                                    }
-                                </ScrollView>
-
-                            </View>
+                        </View>
                     }
 
 
