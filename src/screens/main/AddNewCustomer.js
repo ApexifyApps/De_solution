@@ -151,7 +151,7 @@ const AddNewCustomer = ({ navigation }) => {
                                         </TouchableOpacity>
                                         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
 
-                                            <TouchableOpacity onPress={() => navigation.navigate('PaymentScreen')}>
+                                            <TouchableOpacity onPress={() => navigation.navigate('PaymentScreen', {data: item})}>
                                                 <LinearGradient colors={['#9BC8E2', APPCOLORS.BTN_COLOR, APPCOLORS.BTN_COLOR]} style={{ height: 40, borderRadius: 100, alignItems: 'center', justifyContent: 'center', padding: 10 }}>
                                                     <Text style={{ color: APPCOLORS.WHITE, fontSize: 12, fontWeight: 'bold' }}>Payment</Text>
                                                 </LinearGradient>
