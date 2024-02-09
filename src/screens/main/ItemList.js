@@ -8,8 +8,10 @@ import { useDispatch, useSelector } from 'react-redux'
 import { setCartData, setGrandCartTotalPrice } from '../../redux/AuthSlice'
 import Modal from 'react-native-modal'
 import EditItemModal from './EditItem/EditItemModal'
-const ItemList = ({ navigation }) => {
+import AsyncStorage from '@react-native-async-storage/async-storage'
+const ItemList = ({ navigation, route }) => {
 
+    const {data} = route.params
 
 
     const dispatch = useDispatch()
@@ -22,7 +24,7 @@ const ItemList = ({ navigation }) => {
 
 
     console.log("first", cart)
-    const removeItem = (index) => {
+    const removeItem = async(index) => {
 
         // Create a new array without the selected item
 
@@ -30,6 +32,9 @@ const ItemList = ({ navigation }) => {
 
         const newCart = cart.filter((item, i) => i !== index);
         dispatch(setCartData(newCart))
+
+        await AsyncStorage.setItem(`${data?.debtor_no}`, JSON.parse(newCart))
+
     };
 
 
@@ -41,9 +46,11 @@ const ItemList = ({ navigation }) => {
         setEditItemIndex(null);
     };
 
-    const saveEditedItem = (editedItem) => {
+    const saveEditedItem = async(editedItem) => {
         const updatedCart = cart.map((item, index) => (index === editItemIndex ? editedItem : item));
         dispatch(setCartData(updatedCart));
+
+        await AsyncStorage.setItem(`${data?.debtor_no}`, JSON.parse(updatedCart))
 
         const newGrandTotal = updatedCart.reduce((total, item) => total + item.GrandTotal, 0);
         dispatch(setGrandCartTotalPrice(newGrandTotal));
@@ -56,7 +63,7 @@ const ItemList = ({ navigation }) => {
     return (
         <View style={{ flex: 1, backgroundColor: APPCOLORS.BTN_COLOR, padding: 20, paddingBottom: 0 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <TouchableOpacity onPress={() => navigation.navigate("AddItems", { NewCart: cart })}>
+                <TouchableOpacity onPress={() => navigation.navigate("AddItems", { data: data })}>
                     <Ionicons
                         name={'chevron-back'}
                         color={APPCOLORS.WHITE}

@@ -11,6 +11,8 @@ import Modal from 'react-native-modal'
 import { useDispatch, useSelector } from 'react-redux'
 import { setLoader } from '../../redux/AuthSlice'
 import Toast from 'react-native-toast-message'
+import DateTimePickerModal from "react-native-modal-datetime-picker";
+
 const PaymentScreen = ({ navigation, route }) => {
 
     const { data } = route.params
@@ -23,19 +25,19 @@ const PaymentScreen = ({ navigation, route }) => {
     const [Amount, setAmount] = useState("")
 
     //Bank
-
     const [ChequeNo, setChequqNo] = useState("")
     const [BankDate, setBankDate] = useState("")
+    const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
 
 
     const [isSelectPayment, setPaymentSelect] = useState([])
-    const [SelectCashType, setSelechCashType] = useState(8)
+    const [SelectCashType, setSelechCashType] = useState()
     const dispatch = useDispatch()
 
 
     const Loader = useSelector((state) => state.Data.Loading)
 
-    console.log("first", Loader)
+    console.log("first", SelectCashType)
 
 
 
@@ -55,10 +57,9 @@ const PaymentScreen = ({ navigation, route }) => {
 
             } else {
 
-
                 let data = new FormData();
                 data.append('type', PaymentMethod == "Cash" ? 42 : 2);
-                data.append('bank_act', SelectCashType);
+                data.append('bank_act', SelectCashType.id);
                 data.append('trans_date', Date.now());
                 data.append('amount', Amount);
                 data.append('comments', '');
@@ -109,11 +110,9 @@ const PaymentScreen = ({ navigation, route }) => {
 
             } else {
 
-
-
                 let data = new FormData();
                 data.append('type', PaymentMethod == "Cash" ? 42 : 2);
-                data.append('bank_act', SelectCashType);
+                data.append('bank_act', SelectCashType.id);
                 data.append('trans_date', Date.now());
                 data.append('amount', Amount);
                 data.append('comments', '');
@@ -193,6 +192,8 @@ const PaymentScreen = ({ navigation, route }) => {
                 } else {
                     console.log("bank", response.data.data_bank);
                     setPaymentSelect(response?.data?.data_bank)
+                    setPaymentTypeModal(true)
+
                     dispatch(setLoader(false))
 
 
@@ -210,6 +211,34 @@ const PaymentScreen = ({ navigation, route }) => {
     const getTypes = () => {
         getAccount()
     }
+
+
+    const showDatePicker = () => {
+        setDatePickerVisibility(true);
+    };
+
+    const hideDatePicker = () => {
+        setDatePickerVisibility(false);
+    };
+
+    const handleConfirm = (dates) => {
+
+        const dateString = dates;
+        const date = new Date(dateString);
+
+        const day = String(date.getDate()).padStart(2, '0'); // Get day with leading zero if needed
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Get month with leading zero if needed (months are zero-indexed)
+        const year = date.getFullYear();
+
+        const formattedDate = `${day}-${month}-${year}`;
+
+        console.log(formattedDate); // Output: "08-02-2024"
+
+        setBankDate(formattedDate)
+
+
+        hideDatePicker();
+    };
 
     return (
         <View style={{ flex: 1, backgroundColor: APPCOLORS.CLOSETOWHITE }}>
@@ -233,7 +262,7 @@ const PaymentScreen = ({ navigation, route }) => {
 
             <View style={{ flexDirection: 'row', padding: 20, alignItems: 'center' }}>
 
-                <TouchableOpacity onPress={() => setPaymentMethod("Cash")} style={{ flexDirection: 'row' }}>
+                <TouchableOpacity onPress={() => {setPaymentMethod("Cash"), setSelechCashType() }} style={{ flexDirection: 'row' }}>
                     <View style={{ height: 30, width: 30, borderWidth: 2, borderRadius: 200, alignItems: 'center', justifyContent: 'center' }}>
                         {
                             PaymentMethod == "Cash" ?
@@ -246,7 +275,7 @@ const PaymentScreen = ({ navigation, route }) => {
                     <Text style={{ color: APPCOLORS.BLACK, fontSize: 23, marginLeft: 5, fontWeight: 'bold' }}>Cash</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => setPaymentMethod("Cheque")} style={{ flexDirection: 'row' }}>
+                <TouchableOpacity onPress={() => {setPaymentMethod("Cheque"),setSelechCashType()}} style={{ flexDirection: 'row' }}>
                     <View style={{ height: 30, width: 30, borderWidth: 2, borderRadius: 200, alignItems: 'center', justifyContent: 'center', marginLeft: 40 }}>
                         {
                             PaymentMethod == "Cheque" ?
@@ -275,7 +304,7 @@ const PaymentScreen = ({ navigation, route }) => {
                                 value={Amount}
                             />
 
-                            <TouchableOpacity onPress={() => getTypes()} style={{ height: 50, backgroundColor: 'white', marginTop: 10, borderRadius: 200, elevation: 10, alignItems: 'center', justifyContent: 'center' }}>
+                            <TouchableOpacity onPress={() => getTypes()} style={{ height: 50, backgroundColor:  'white', marginTop: 10, borderRadius: 200, elevation: 10, alignItems: 'center', justifyContent: 'center' }}>
 
                                 {
                                     Loader == true ?
@@ -283,7 +312,7 @@ const PaymentScreen = ({ navigation, route }) => {
                                         <ActivityIndicator size={'large'} color={'blue'} />
                                         :
 
-                                        <Text>{SelectCashType == 6 ? "Cash In Hand" : SelectCashType == 7 ? "Pretty Cash" : SelectCashType == 9 ? "Factory Cash" : "Select Type"}</Text>
+                                        <Text>{SelectCashType ? SelectCashType.bank_account_name : "Select Type"}</Text>
                                 }
                             </TouchableOpacity>
 
@@ -292,10 +321,18 @@ const PaymentScreen = ({ navigation, route }) => {
                         :
                         <>
                             <Text style={{ color: APPCOLORS.BLACK, fontSize: 23, marginLeft: 5, fontWeight: 'bold' }}>Cheque</Text>
-                            <TextInput
-                                placeholder='Bank Name'
-                                style={{ height: 50, backgroundColor: APPCOLORS.WHITE, elevation: 10, borderRadius: 200, paddingHorizontal: 20, marginTop: 10 }}
-                            />
+                            <TouchableOpacity onPress={() => getTypes()} style={{ height: 50, backgroundColor: 'white', marginTop: 10, borderRadius: 200, elevation: 10, alignItems: 'center', justifyContent: 'center' }}>
+
+                                {
+                                    Loader == true ?
+
+                                        <ActivityIndicator size={'large'} color={'blue'} />
+                                        :
+
+                                        <Text>{SelectCashType ? SelectCashType.bank_account_name : "Bank name"}</Text>
+                                }
+                            </TouchableOpacity>
+
                             <TextInput
                                 placeholder='Cheque no'
                                 style={{ height: 50, backgroundColor: APPCOLORS.WHITE, elevation: 10, borderRadius: 200, paddingHorizontal: 20, marginTop: 10 }}
@@ -314,14 +351,10 @@ const PaymentScreen = ({ navigation, route }) => {
                                     }}
                                     value={Amount}
                                 />
-                                <TextInput
-                                    placeholder='Date'
-                                    style={{ height: 50, backgroundColor: APPCOLORS.WHITE, elevation: 10, borderRadius: 200, paddingHorizontal: 20, marginTop: 10, width: '47%' }}
-                                    onChangeText={(txt) => {
-                                        setBankDate(txt)
-                                    }}
-                                    value={BankDate}
-                                />
+                                <TouchableOpacity onPress={() => setDatePickerVisibility(true)} style={{ height: 50, backgroundColor: APPCOLORS.WHITE, elevation: 10, borderRadius: 200, paddingHorizontal: 20, marginTop: 10, width: '47%', alignItems: 'flex-start', justifyContent: 'center' }}>
+                                    <Text style={{ color: 'gray' }}>{BankDate ? BankDate : "Pick Date"}</Text>
+                                </TouchableOpacity>
+
                             </View>
 
                             <View style={{ height: 2, backgroundColor: APPCOLORS.BLACK, marginTop: 20 }} />
@@ -361,10 +394,10 @@ const PaymentScreen = ({ navigation, route }) => {
                         <FlatList
                             data={isSelectPayment}
                             renderItem={({ item }) => {
-                                console.log(item)
+
                                 return (
-                                    <TouchableOpacity onPress={() => setSelechCashType(item.id)} style={{ height: 50, borderWidth: 1, marginTop: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: SelectCashType == item.id ? APPCOLORS.BTN_COLOR : null }}>
-                                        <Text style={{ color: SelectCashType == item.id ? 'white' : 'black' }}>{item.bank_account_name}</Text>
+                                    <TouchableOpacity onPress={() => setSelechCashType(item)} style={{ height: 50, borderWidth: 1, marginTop: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: SelectCashType?.id == item.id ? APPCOLORS.BTN_COLOR : null }}>
+                                        <Text style={{ color: SelectCashType?.id == item.id ? 'white' : 'black' }}>{item.bank_account_name}</Text>
                                     </TouchableOpacity>
                                 )
                             }}
@@ -375,6 +408,13 @@ const PaymentScreen = ({ navigation, route }) => {
                 </Modal>
 
             </View>
+
+            <DateTimePickerModal
+                isVisible={isDatePickerVisible}
+                mode="date"
+                onConfirm={handleConfirm}
+                onCancel={hideDatePicker}
+            />
 
             <Toast />
 

@@ -8,6 +8,8 @@ import Octicons from 'react-native-vector-icons/Octicons'
 import EvilIcons from 'react-native-vector-icons/EvilIcons'
 import axios from 'axios'
 import LottieView from 'lottie-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { addEventListener } from "@react-native-community/netinfo";
 
 const AddNewCustomer = ({ navigation }) => {
 
@@ -24,14 +26,44 @@ const AddNewCustomer = ({ navigation }) => {
     ]
 
     const [AllOrders, setAllOrders] = useState([])
+
     const [Loader, setLoader] = useState(false)
     const [Search, setSearch] = useState("")
 
+    // Subscribe
+    useEffect(() => {
+
+        const unsubscribe = addEventListener(async (state) => {
+            console.log("Connection type", state.type);
+
+            console.log("Is connected?", state.isConnected);
+
+            // if (state.type === false) {
+            const getAllProducts = await AsyncStorage.getItem("GetAllCustomers")
+
+            setAllOrders(JSON.parse(getAllProducts))
+            // } else {
+            //     console.log("Connection type", state.type);
+            // }
+        });
+        // Unsubscribe
+        unsubscribe();
+    }, [])
+
 
     useEffect(() => {
-        getAllOrders()
-    }, [])
+        const unsubscribe = navigation.addListener('focus', () => {
+            getAllOrders()
+        });
+        return unsubscribe;
+
+    }, [navigation])
+
+
+
     const getAllOrders = () => {
+
+
         setLoader(true)
         let config = {
             method: 'get',
@@ -41,9 +73,11 @@ const AddNewCustomer = ({ navigation }) => {
         };
 
         axios.request(config)
-            .then((response) => {
+            .then(async (response) => {
                 console.log(JSON.stringify(response.data));
                 setAllOrders(response?.data?.data)
+
+                await AsyncStorage.setItem("GetAllCustomers", JSON.stringify(response?.data?.data))
                 setLoader(false)
 
             })
@@ -98,90 +132,90 @@ const AddNewCustomer = ({ navigation }) => {
                     </View>
                     :
 
-                    <View style={{flex:1}}>
+                    <View style={{ flex: 1 }}>
                         <ScrollView>
-                        {
-                            AllOrders.filter((val) => {
-                                console.log(val.debtor_no)
+                            {
+                                AllOrders?.filter((val) => {
 
-                                const itemNameLowerCase = val.name.toLowerCase();
 
-                                if (Search == "") {
-                                    return val
-                                } else if (itemNameLowerCase?.includes(Search.toLowerCase())) {
-                                    return val
-                                }
-                            }).map((item, index) => {
-                                return (
-                                    <View key={index} style={{ borderRadius: 20, elevation: 10, backgroundColor: APPCOLORS.CLOSETOWHITE, marginTop: 10, width: '90%', alignSelf: 'center', padding: 10 }}>
+                                    const itemNameLowerCase = val.name.toLowerCase();
 
-                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                                            <View style={{ flexDirection: 'row' }}>
-                                                <Octicons
-                                                    name={'person'}
-                                                    color={APPCOLORS.BLACK}
-                                                    size={20}
-                                                />
-                                                <Text style={{ color: APPCOLORS.BLACK, marginLeft: 10 }}>{item?.name}</Text>
+                                    if (Search == "") {
+                                        return val
+                                    } else if (itemNameLowerCase?.includes(Search.toLowerCase())) {
+                                        return val
+                                    }
+                                }).map((item, index) => {
+                                    return (
+                                        <View key={index} style={{ borderRadius: 20, elevation: 10, backgroundColor: APPCOLORS.CLOSETOWHITE, marginTop: 10, width: '90%', alignSelf: 'center', padding: 10 }}>
+
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                                <View style={{ flexDirection: 'row' }}>
+                                                    <Octicons
+                                                        name={'person'}
+                                                        color={APPCOLORS.BLACK}
+                                                        size={20}
+                                                    />
+                                                    <Text style={{ color: APPCOLORS.BLACK, marginLeft: 10 }}>{item?.name}</Text>
+                                                </View>
+
+                                                <View style={{ flexDirection: 'row' }}>
+                                                    <AntDesign
+                                                        name={'phone'}
+                                                        color={APPCOLORS.BLACK}
+                                                        size={20}
+                                                    />
+                                                    <Text style={{ color: APPCOLORS.BLACK, marginLeft: 10 }}>{item?.debtor_ref}</Text>
+                                                </View>
                                             </View>
 
-                                            <View style={{ flexDirection: 'row' }}>
-                                                <AntDesign
-                                                    name={'phone'}
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+                                                <EvilIcons
+                                                    name={'location'}
                                                     color={APPCOLORS.BLACK}
-                                                    size={20}
+                                                    size={22}
                                                 />
-                                                <Text style={{ color: APPCOLORS.BLACK, marginLeft: 10 }}>{item?.debtor_ref}</Text>
+                                                <Text style={{ color: APPCOLORS.BLACK, }} numberOfLines={1}>{item.address}</Text>
                                             </View>
-                                        </View>
 
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
-                                            <EvilIcons
-                                                name={'location'}
-                                                color={APPCOLORS.BLACK}
-                                                size={22}
-                                            />
-                                            <Text style={{ color: APPCOLORS.BLACK, }} numberOfLines={1}>{item.address}</Text>
-                                        </View>
-
-                                        <TouchableOpacity onPress={() => navigation.navigate('AddItems',{data: item})} style={{ marginTop: 15 }}>
-                                            <LinearGradient colors={['#9BC8E2', APPCOLORS.BTN_COLOR, APPCOLORS.BTN_COLOR]} style={{ height: 40, borderRadius: 100, alignItems: 'center', justifyContent: 'center', padding: 10, }}>
-                                                <Text style={{ color: APPCOLORS.WHITE, fontSize: 12, fontWeight: 'bold' }}>Take Order</Text>
-                                            </LinearGradient>
-                                        </TouchableOpacity>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
-
-                                            <TouchableOpacity onPress={() => navigation.navigate('PaymentScreen', {data: item})}>
-                                                <LinearGradient colors={['#9BC8E2', APPCOLORS.BTN_COLOR, APPCOLORS.BTN_COLOR]} style={{ height: 40, borderRadius: 100, alignItems: 'center', justifyContent: 'center', padding: 10 }}>
-                                                    <Text style={{ color: APPCOLORS.WHITE, fontSize: 12, fontWeight: 'bold' }}>Payment</Text>
+                                            <TouchableOpacity onPress={() => navigation.navigate('AddItems', { data: item })} style={{ marginTop: 15 }}>
+                                                <LinearGradient colors={['#9BC8E2', APPCOLORS.BTN_COLOR, APPCOLORS.BTN_COLOR]} style={{ height: 40, borderRadius: 100, alignItems: 'center', justifyContent: 'center', padding: 10, }}>
+                                                    <Text style={{ color: APPCOLORS.WHITE, fontSize: 12, fontWeight: 'bold' }}>Take Order</Text>
                                                 </LinearGradient>
                                             </TouchableOpacity>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+
+                                                <TouchableOpacity onPress={() => navigation.navigate('PaymentScreen', { data: item })}>
+                                                    <LinearGradient colors={['#9BC8E2', APPCOLORS.BTN_COLOR, APPCOLORS.BTN_COLOR]} style={{ height: 40, borderRadius: 100, alignItems: 'center', justifyContent: 'center', padding: 10 }}>
+                                                        <Text style={{ color: APPCOLORS.WHITE, fontSize: 12, fontWeight: 'bold' }}>Payment</Text>
+                                                    </LinearGradient>
+                                                </TouchableOpacity>
 
 
-                                            <View style={{ flexDirection: 'row', width: '80%', justifyContent: 'space-around' }}>
-                                                <View>
-                                                    <Text style={{ color: APPCOLORS.BLACK, fontWeight: 'bold' }}>Last Order</Text>
-                                                    <Text>23-11-2023</Text>
-                                                </View>
+                                                <View style={{ flexDirection: 'row', width: '80%', justifyContent: 'space-around' }}>
+                                                    <View>
+                                                        <Text style={{ color: APPCOLORS.BLACK, fontWeight: 'bold' }}>Last Order</Text>
+                                                        <Text>23-11-2023</Text>
+                                                    </View>
 
-                                                <View>
-                                                    <Text style={{ color: APPCOLORS.BLACK, fontWeight: 'bold' }}>Total Order</Text>
-                                                    <Text>25</Text>
-                                                </View>
+                                                    <View>
+                                                        <Text style={{ color: APPCOLORS.BLACK, fontWeight: 'bold' }}>Total Order</Text>
+                                                        <Text>25</Text>
+                                                    </View>
 
-                                                <View>
-                                                    <Text style={{ color: APPCOLORS.BLACK, fontWeight: 'bold' }}>Total Pay</Text>
-                                                    <Text>Rs 1,000</Text>
+                                                    <View>
+                                                        <Text style={{ color: APPCOLORS.BLACK, fontWeight: 'bold' }}>Total Pay</Text>
+                                                        <Text>Rs 1,000</Text>
+                                                    </View>
                                                 </View>
                                             </View>
                                         </View>
-                                    </View>
-                                )
-                            })
-                        }
+                                    )
+                                })
+                            }
                         </ScrollView>
                     </View>
-         
+
             }
 
             <TouchableOpacity onPress={() => navigation.navigate('InsertNewCustomerDetail')} style={{ backgroundColor: 'red', height: 50, width: '100%', alignSelf: 'center', alignItems: 'center', justifyContent: 'center' }}>

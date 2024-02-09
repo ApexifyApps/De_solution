@@ -10,6 +10,7 @@ import axios from 'axios'
 import { useDispatch, useSelector } from 'react-redux'
 import { setLoader } from '../../redux/AuthSlice'
 import Toast from 'react-native-toast-message'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 const InsertNewCustomerDetail = ({ navigation }) => {
 
     const userData = useSelector(state => state.Data.currentData)
@@ -22,66 +23,108 @@ const InsertNewCustomerDetail = ({ navigation }) => {
 
     const dispatch = useDispatch()
 
-    const AddNewCustomer = () => {
+    const AddNewCustomer = async () => {
+
+
+        const OfflineUser = {
+            'CustName': CustomerName,
+            'cust_ref': PhoneNumber,
+            'address': Address
+        }
+
+        console.log("first",OfflineUser)
+
+        await AsyncStorage.setItem("setOfflineUser", JSON.stringify(OfflineUser))
+
+
 
         dispatch(setLoader(true))
-        if(!CustomerName){
+        if (!CustomerName) {
             dispatch(setLoader(false))
             Toast.show({
                 type: 'error',
                 text1: 'Customer Name is required'
             })
 
-        }else if(!PhoneNumber){
+        } else if (!PhoneNumber) {
             dispatch(setLoader(false))
             Toast.show({
                 type: 'error',
                 text1: 'Phone Number Name is required'
             })
 
-        }else if(!Address){
+        } else if (!Address) {
             dispatch(setLoader(false))
 
             Toast.show({
                 type: 'error',
                 text1: 'Address is required'
             })
-        }else{
+        } else {
+
+
+            let data = new FormData();
+            data.append('CustName', CustomerName);
+            data.append('cust_ref', PhoneNumber);
+            data.append('address', Address);
+            data.append('user_id', userData.id);
+
+            let config = {
+                method: 'post',
+                maxBodyLength: Infinity,
+                url: 'https://e.de2solutions.com/mobile/debtors_master_post.php',
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                },
+                data: data
+            };
+
+            axios.request(config)
+                .then(async(response) => {
+                    console.log(JSON.stringify(response.data));
+                    Toast.show({
+                        type: 'success',
+                        text1: 'Successfully created new customer'
+                    })
+                    setCustomerName("")
+                    setPhoneNumber("")
+                    setAddress("")
+                    dispatch(setLoader(false))
+                    await AsyncStorage.removeItem("setOfflineUser")
+
+                })
+                .catch((error) => {
+                    console.log(error);
+                    dispatch(setLoader(false))
+                });
+        }
+
+    }
+
+    const SyncOffline = async () => {
+
+
+        const getOfflineSyncUser = await AsyncStorage.getItem("setOfflineUser")
+
+        if(getOfflineSyncUser){
 
         
-        let data = new FormData();
-        data.append('CustName', CustomerName);
-        data.append('cust_ref', PhoneNumber);
-        data.append('address', Address);
-        data.append('user_id', userData.id);
 
-        let config = {
-            method: 'post',
-            maxBodyLength: Infinity,
-            url: 'https://e.de2solutions.com/mobile/debtors_master_post.php',
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            },
-            data: data
-        };
+        const getOfflineData = JSON.parse(getOfflineSyncUser)
 
-        axios.request(config)
-            .then((response) => {
-                console.log(JSON.stringify(response.data));
-                Toast.show({
-                    type: 'success',
-                    text1: 'Successfully created new customer'
-                })
-                setCustomerName("")
-                setPhoneNumber("")
-                setAddress("")
-                dispatch(setLoader(false))
-            })
-            .catch((error) => {
-                console.log(error);
-                dispatch(setLoader(false))
-            });
-        }
+        setCustomerName(getOfflineData.CustName)
+        setPhoneNumber(getOfflineData.cust_ref)
+        setAddress(getOfflineData.address)
+
+        console.log("first",getOfflineData)
+    }else{
+        Toast.show({
+            type:'error',
+            text1: "No User Found"
+        })
+    }
+
+
 
     }
 
@@ -99,7 +142,9 @@ const InsertNewCustomerDetail = ({ navigation }) => {
 
                 <Text style={{ color: APPCOLORS.WHITE, fontSize: 20, }}>Add Customer</Text>
 
-                <View style={{ width: 20 }} />
+                <TouchableOpacity onPress={()=> SyncOffline()}>
+                    <Text style={{color:'white'}}>Get Offline</Text>
+                </TouchableOpacity>
 
 
 
@@ -139,9 +184,9 @@ const InsertNewCustomerDetail = ({ navigation }) => {
                 <TouchableOpacity onPress={() => AddNewCustomer()} style={{ height: 60, backgroundColor: APPCOLORS.BTN_COLOR, marginTop: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
                     {
                         isLoader == true ?
-                        <ActivityIndicator size={'large'} color={'white'}/>
-                        :
-                    <Text style={{ color: APPCOLORS.WHITE, fontSize: 20, fontWeight: 'bold' }}>Submit</Text>
+                            <ActivityIndicator size={'large'} color={'white'} />
+                            :
+                            <Text style={{ color: APPCOLORS.WHITE, fontSize: 20, fontWeight: 'bold' }}>Submit</Text>
                     }
                 </TouchableOpacity>
 

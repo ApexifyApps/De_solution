@@ -6,6 +6,7 @@ import LinearGradient from 'react-native-linear-gradient'
 import { useDispatch } from 'react-redux'
 import { setAllProducts, setLoader } from '../../redux/AuthSlice'
 import axios from 'axios'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 const Home = ({navigation}) => {
 
 
@@ -30,10 +31,11 @@ const Home = ({navigation}) => {
         };
 
         axios.request(config)
-            .then((response) => {
+            .then(async(response) => {
                 console.log(JSON.stringify(response.data.data));
                 dispatch(setLoader(false))
                 dispatch(setAllProducts(response.data.data))
+                await AsyncStorage.setItem('AllProducts', JSON.stringify(response.data.data))
 
              
             })

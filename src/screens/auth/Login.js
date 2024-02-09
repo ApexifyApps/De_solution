@@ -63,12 +63,12 @@ const Login = ({ navigation }) => {
 
                 <TextInput
                     placeholder='Password'
+                    secureTextEntry={true}
                     style={{ color: APPCOLORS.BLACK, backgroundColor: APPCOLORS.TEXTFIELDCOLOR, borderRadius: 10, paddingHorizontal: 10, marginTop: 10 }}
                     onChangeText={(txt) => {
                         setPassword(txt)
                     }}
                     value={password}
-                    secureTextEntry
                 />
 
                 <View style={{ marginTop: 40 }}>

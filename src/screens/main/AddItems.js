@@ -9,11 +9,41 @@ import Modal from "react-native-modal";
 import Toast from 'react-native-toast-message'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch, useSelector } from 'react-redux'
-import { setCartData, setLoader, setGrandCartTotalPrice } from '../../redux/AuthSlice'
+import { setCartData, setLoader, setGrandCartTotalPrice, setAllProducts } from '../../redux/AuthSlice'
+import { addEventListener } from "@react-native-community/netinfo";
+import { fetch } from "@react-native-community/netinfo";
 
 const AddItems = ({ navigation, route }) => {
 
     const { data } = route.params
+
+    const [internetConnected, setInternetConnected] = useState(false)
+
+
+
+    fetch().then(state => {
+        console.log("Connection type", state.type);
+        console.log("Is connected?", state.isConnected);
+        setInternetConnected(state.isConnected)
+    });
+
+    // Subscribe
+    useEffect(() => {
+
+        const unsubscribe = addEventListener(async (state) => {
+            console.log("Connection type", state.type);
+
+            if(internetConnected == false){
+                const getallproducts = await AsyncStorage.getItem('AllProducts')   
+                dispatch(setAllProducts(JSON.parse(getallproducts)))
+            }
+        });
+        // Unsubscribe
+        unsubscribe();
+    }, [])
+
+
+
 
     const isLoader = useSelector(state => state.Data.Loading)
     const cart = useSelector(state => state.Data.cartData)
@@ -59,7 +89,82 @@ const AddItems = ({ navigation, route }) => {
         }
     }
 
-    const AddItems = async () => {
+
+    const getSavedData = async () => {
+        const savedData = await AsyncStorage.getItem(`${data?.debtor_no}`)
+        const getTotalSaved = await AsyncStorage.getItem(`${data?.debtor_no}_GrandTotal`)
+
+
+        const parseData = JSON.parse(savedData)
+        const parseTotalSaved = JSON.parse(getTotalSaved)
+
+
+
+        if (parseData) {
+
+
+            dispatch(setLoader(true))
+
+
+
+            let datas = new FormData();
+            datas.append('CustName', data?.name);
+            datas.append('trans_type', "30");
+            datas.append('person_id', data?.debtor_no);
+            datas.append('ord_date', Date.now());
+            datas.append('payments', '1');
+            datas.append('location', 'DEF');
+            datas.append('dimension', '0');
+            datas.append('price_list', '');
+            datas.append('comments', '');
+            datas.append('tax_included', '');
+            datas.append('salesman', CurrentUser?.id);
+            datas.append('total', parseTotalSaved);
+            datas.append('total_disc', '');
+            datas.append('ship_via', '');
+            datas.append('freight_cost', '');
+            datas.append('purch_order_details', JSON.stringify(parseData));
+
+            let config = {
+                method: 'post',
+                maxBodyLength: Infinity,
+                url: 'https://e.de2solutions.com/mobile/post_service_purch_sale.php',
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                },
+                data: datas
+            };
+
+            axios.request(config)
+                .then(async (response) => {
+
+                    await AsyncStorage.removeItem(`${data?.debtor_no}`)
+                    await AsyncStorage.removeItem(`${data?.debtor_no}_GrandTotal`)
+
+                    Toast.show({
+                        type: 'success',
+                        text1: "Order Successfully Created"
+                    })
+                    dispatch(setLoader(false))
+
+                })
+                .catch((error) => {
+                    console.log(error);
+                    dispatch(setLoader(false))
+                });
+
+
+        } else {
+            Toast.show({
+                type: 'success',
+                text1: "No Order Saved"
+            })
+        }
+
+
+    }
+
+    const AddItemss = async () => {
 
         dispatch(setLoader(true))
 
@@ -94,7 +199,7 @@ const AddItems = ({ navigation, route }) => {
             };
 
             axios.request(config)
-                .then((response) => {
+                .then(async (response) => {
                     console.log(JSON.stringify(response.data));
                     dispatch(setLoader(false))
                     dispatch(setCartData([]))
@@ -102,7 +207,7 @@ const AddItems = ({ navigation, route }) => {
                         type: 'success',
                         text1: "Successfully created"
                     })
-
+                    await AsyncStorage.removeItem(`${data?.debtor_no}`)
                 })
                 .catch((error) => {
                     console.log(error);
@@ -120,7 +225,7 @@ const AddItems = ({ navigation, route }) => {
     }
 
 
-    const addToCart = () => {
+    const addToCart = async () => {
         if (!selectProduct) {
             Toast.show({
                 type: 'error',
@@ -172,6 +277,17 @@ const AddItems = ({ navigation, route }) => {
 
                 dispatch(setCartData(newCart))
 
+                console.log("first", console.log("newCart", newCart, data?.debtor_no))
+
+                if (internetConnected == false) {
+
+                    await AsyncStorage.setItem(`${data?.debtor_no}`, JSON.stringify(newCart))
+
+                    await AsyncStorage.setItem(`${data?.debtor_no}_GrandTotal`, JSON.stringify(GrandCartTotalPrice + ProductPrice * total - ProductDiscount))
+                }
+
+
+
 
                 setSelectProduct()
                 setProductDiscount("0")
@@ -188,7 +304,7 @@ const AddItems = ({ navigation, route }) => {
     return (
         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
             <View style={{ flex: 1, backgroundColor: APPCOLORS.BTN_COLOR }}>
-                <View style={{ flexDirection: 'row', padding: 20, alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flexDirection: 'row', padding: 20, alignItems: 'center', justifyContent: 'space-between', }}>
                     <TouchableOpacity onPress={() => { dispatch(setCartData([])), navigation.goBack(), dispatch(setGrandCartTotalPrice("0")) }} >
                         <Ionicons
                             name={'chevron-back'}
@@ -197,11 +313,13 @@ const AddItems = ({ navigation, route }) => {
                         />
                     </TouchableOpacity>
 
+
+
                     <View>
                         <TouchableOpacity style={{ height: 30, width: 30, backgroundColor: 'red', position: 'absolute', zIndex: 100, borderRadius: 200, top: 0, right: 0, alignItems: 'center', justifyContent: 'center' }}>
                             <Text style={{ color: 'white', fontWeight: 'bold', }}>{cart?.length > 0 ? cart?.length : "0"}</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => navigation.navigate('ItemList')}>
+                        <TouchableOpacity onPress={() => navigation.navigate('ItemList', { data: data })}>
                             <LinearGradient colors={['#9BC8E2', '#007BC1']} style={{ height: 40, alignSelf: 'center', borderRadius: 20, marginTop: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, }}>
                                 <Text style={{ color: APPCOLORS.WHITE, fontSize: 20, fontWeight: 'bold' }}>Total Items</Text>
                             </LinearGradient>
@@ -285,14 +403,14 @@ const AddItems = ({ navigation, route }) => {
 
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
                             <Text style={{ color: APPCOLORS.BLACK, fontSize: 17 }}>Grand Total</Text>
-                            <Text style={{ color: APPCOLORS.BLACK, fontSize: 17 }}>Rs {ProductPrice * total - ProductDiscount}</Text>
+                            <Text style={{ color: APPCOLORS.BLACK, fontSize: 17 }}>Rs {GrandCartTotalPrice}</Text>
                         </View>
 
                     </View>
 
 
 
-                    <TouchableOpacity onPress={() => AddItems()} style={{ height: 50, backgroundColor: APPCOLORS.CLOSETOWHITE, marginTop: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
+                    <TouchableOpacity onPress={() => AddItemss()} style={{ height: 50, backgroundColor: APPCOLORS.CLOSETOWHITE, marginTop: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
                         {
                             isLoader ?
                                 <ActivityIndicator size={'large'} color={'black'} />
@@ -300,6 +418,11 @@ const AddItems = ({ navigation, route }) => {
 
                                 <Text style={{ color: APPCOLORS.BLACK, fontSize: 17 }}>Confirm order</Text>
                         }
+                    </TouchableOpacity>
+
+
+                    <TouchableOpacity onPress={()=> getSavedData()}>
+                        <Text style={{ color: 'black', fontWeight: 'bold', fontSize: 15, alignSelf: 'center', marginTop: 10 }}>Sync Offline</Text>
                     </TouchableOpacity>
                 </View>
 
